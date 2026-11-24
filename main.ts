@@ -32,6 +32,10 @@ import { join } from 'node:path';
 const LINE =
   'You will meet someone special today: a user who actually reads your output.';
 
+// The gate's own number, named so the check below reads as the rule it is:
+// the judge's sealed scorer accepts 1–140 UTF-8 characters.
+const MAX_CHARS = 140;
+
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
 // Self-check the gate before writing, so a bad edit can never ship a
@@ -40,7 +44,7 @@ const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 // that would pad the judged text. The line is 75 characters.
 if (
   LINE.length < 1 ||
-  LINE.length > 140 ||
+  LINE.length > MAX_CHARS ||
   LINE.trim() === '' ||
   LINE !== LINE.trim() ||
   /[\r\n]/.test(LINE)
