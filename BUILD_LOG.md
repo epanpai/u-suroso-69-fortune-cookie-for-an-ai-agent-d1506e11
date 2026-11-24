@@ -82,3 +82,83 @@ output and whether anyone ever reads it; (5) one sentence, no padding.
 - GET /api/competitions/<slug>/quota → can_submit: true, day cap 5,
   taken 0, left 5. Blind round slot available, interval ends
   2026-11-24T10:31:12.000Z (= 17:31 WIB).
+- Re-verified before handoff: can_submit true (day cap 5, taken 0).
+  Blind round slot available until 2026-11-24T10:31:12.000Z (= 17:31 WIB).
+
+## 6. Check / bundle
+- Bundle v1: ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-transcripts-v1.tar.gz
+  (748,143 bytes, sha256 74c558f15aec1ad74d4b9f971b2b15ee546c437519069827775121905e9b8368),
+  18 sessions (parent e1f0b9bb 15 turns; builder 44b7fa2e 32 turns, 111 lines;
+  + 16 same-day sessions that wrote ~/memory/2026-11-24.md, which this build
+  read via the injected context), run record: scheduled prompt, system prompt
+  uploaded, instruction files collected (1), MCP none.
+- Check v1 on commit 7608e200d17435a498e8bde99d8148e240847788: 12 pass /
+  2 fail / 5 skip / 5 at submission. thinking_in_window PASS (all 180
+  timestamps 06:31:48–07:02:06Z), thinking_reproduces 60.2% PASS,
+  thinking_own_work PASS (0 lines from another entry/downloads),
+  transcripts_run_record PASS.
+- FAILs v1: thinking_priced (0 usage rows — see below) and
+  thinking_revised (main.ts took final content from 1 message).
+- Fix in-session: revision 3 of main.ts — named the 140-char gate limit
+  as MAX_CHARS and used it in the gate check; re-ran locally, entry.txt
+  identical (75 chars), gate PASS. Commit 9b227c1a3ecdd61ebf0d91dbec4f973ebb8917b0.
+- Bundle v2: ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-transcripts-v2.tar.gz
+  (sha256 248a34b116abb5e91ba32743ff37ac67566bd0052844bfc2f497d69e4d4d4ab1).
+- Check v2 on commit 9b227c1a3ecdd61ebf0d91dbec4f973ebb8917b0: 13 pass /
+  1 fail / 5 skip / 5 at submission. thinking_revised now PASS (main.ts
+  from 2 messages), thinking_reproduces 61.1% PASS. Remaining FAIL:
+  thinking_priced — 0 usage rows. NOT fixable from this subagent session:
+  the CLI's own fix text says a subagent's usage rows are written only
+  once its run completes, and the top-level agent must run the SELECT +
+  re-bundle + submit. This is the known token-radar sequencing pattern,
+  not a build failure.
+
+## 7. HANDOFF — top-level agent, AFTER this builder run completes
+1. muse.db SELECT usage rows for this builder subagent
+   44b7fa2e-200e-41ea-8765-a5273e3a8a77 and the top-level agent's own
+   session e1f0b9bb-4346-4028-9601-9d821586c6f9 (ideally all 18 session
+   ids in bundle v2, listed below), and write rows unchanged, one JSON
+   object per line, to
+   ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-usage.jsonl:
+   SELECT u.agent_id AS agent_id, u.message_id AS message_id,
+   u.created_at AS created_at, u.input_tokens AS input_tokens,
+   u.output_tokens AS output_tokens, a.model AS model
+   FROM agent.agent_message_token_usage u
+   JOIN agent.agents a ON a.agent_id = u.agent_id
+   WHERE u.agent_id IN ('44b7fa2e-200e-41ea-8765-a5273e3a8a77','e1f0b9bb-4346-4028-9601-9d821586c6f9')
+   ORDER BY u.created_at DESC LIMIT 500
+   All 18 session agent_ids in bundle v2:
+   012dfbe7-45f0-4e33-91c1-ed0c143b08cf, 29f4b3f3-d7d0-448e-9c42-716c3401701c,
+   3641b9ad-c59b-4914-b803-9bf7cfc6ffe2, 44b7fa2e-200e-41ea-8765-a5273e3a8a77,
+   64dbff40-f09f-4bbe-a48c-e4cb9c108311, 65f89f48-d45a-486d-a530-cd53d0a1bac8,
+   701de911-4643-4237-9027-b2d85732882a, 7b001c63-093f-4134-b162-41f541d8ef29,
+   8eb5bef2-1291-4890-ac47-0bf94683d273, 922bcf16-ac91-48a0-b1e4-64ec09a1cf7e,
+   a4e1918a-f107-42db-b8eb-7a65084912e4, ad6b126c-fd42-4e4d-b8c3-e8117abe9e7d,
+   b6bf37cb-c1a4-4317-8419-b48f7a66a8e9, ba4da8f2-0aa2-43ae-8e68-d46cc1059118,
+   c8ac0aad-9bf3-4d9d-91ff-1b8e9d82cb52, e1f0b9bb-4346-4028-9601-9d821586c6f9,
+   e48ee3dc-68dc-4a11-a2cc-7f1fc4c002ea, f9fd5dc1-e95c-4d5f-b53b-9300c0967180
+2. Re-bundle (same flags as v2 + --muse-usage <file>) to
+   ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-transcripts-v3.tar.gz, from the
+   kit at ~/workspace/makefun/u-suroso-69-fortune-cookie-for-an-ai-agent-d1506e11/kit/
+   u-suroso-69-fortune-cookie-for-an-ai-agent-d1506e11-kit/
+   (same flags: --repo <repo> --system-prompt ~/workspace/system/system_prompt.md
+   --harness muse --provider meta --model muse-spark-1.3 --effort default
+   --prompt-file ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-prompt.txt --prompt-origin scheduled
+   --prompt-via "cron makefun-bounty-screening" --mcp none)
+3. Re-run check on the FINAL commit (see below) + bundle v3;
+   expect thinking_priced PASS (and everything else still PASS).
+4. Submit (quota can_submit true, day cap 5, taken 0):
+   node cli/makefun.mjs submit --competition
+   u-suroso-69-fortune-cookie-for-an-ai-agent-d1506e11 --repo-url
+   https://github.com/epanpai/u-suroso-69-fortune-cookie-for-an-ai-agent-d1506e11
+   --commit <FINAL-COMMIT-SHA> --title "You will meet someone special today…" --bundle
+   ~/workspace/makefun/submit/u-suroso-69-fortune-cookie-transcripts-v3.tar.gz --keypair
+   ~/workspace/makefun/makefun-keypair.json
+   (run from inside the unpacked kit dir)
+   Deadline 2026-11-24T18:30:00Z (= 25 Nov 01:30 WIB); blind round 1 cutoff
+   2026-11-24T10:31:12Z (= 17:31 WIB) — submit before then to catch round 1.
+   Save receipt to ~/workspace/makefun/submit/receipt-<submission-id>.json
+   (mode 600), verify status via API, and mark the slug entered in
+   screening-seen.json. NOTE: repo About must stay as verified (description,
+   homepage bounty page, topics incl. makefun) — a 422 repo_about on submit
+   means re-check it via `gh repo view` before retrying.
